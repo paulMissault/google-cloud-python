@@ -9,7 +9,7 @@ common helpers (e.g. base ``Client`` classes) used by all of the
 
 -  `Documentation`_
 
-.. _Documentation: https://googlecloudplatform.github.io/google-cloud-python/latest/core/modules.html
+.. _Documentation: https://googlecloudplatform.github.io/google-cloud-python/latest/core/index.html
 
 Quick Start
 -----------
@@ -17,6 +17,12 @@ Quick Start
 .. code-block:: console
 
     $ pip install --upgrade google-cloud-core
+
+For more information on setting up your Python development environment,
+such as installing ``pip`` and ``virtualenv`` on your system, please refer
+to `Python Development Environment Setup Guide`_ for Google Cloud Platform.
+
+.. _Python Development Environment Setup Guide: https://cloud.google.com/python/setup
 
 .. |pypi| image:: https://img.shields.io/pypi/v/google-cloud-core.svg
    :target: https://pypi.org/project/google-cloud-core/

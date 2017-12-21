@@ -1,4 +1,4 @@
-# Copyright 2017, Google Inc. All rights reserved.
+# Copyright 2017, Google LLC All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,20 @@
 from __future__ import absolute_import
 
 from google.cloud.pubsub_v1 import types
-from google.cloud.pubsub_v1.publisher import Client as PublisherClient
-from google.cloud.pubsub_v1.subscriber import Client as SubscriberClient
+from google.cloud.pubsub_v1 import publisher
+from google.cloud.pubsub_v1 import subscriber
+
+
+class PublisherClient(publisher.Client):
+    __doc__ = publisher.Client.__doc__
+
+
+class SubscriberClient(subscriber.Client):
+    __doc__ = subscriber.Client.__doc__
+
 
 __all__ = (
+    'types',
     'PublisherClient',
     'SubscriberClient',
-    'types',
 )

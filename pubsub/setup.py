@@ -1,4 +1,4 @@
-# Copyright 2016 Google Inc.
+# Copyright 2016 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,26 +51,21 @@ SETUP_BASE = {
 
 
 REQUIREMENTS = [
-    'google-cloud-core >= 0.27.0, < 0.28dev',
-    'google-gax >= 0.15.13, < 0.16dev',
-    'googleapis-common-protos[grpc] >= 1.5.2, < 2.0dev',
+    'google-api-core[grpc] >= 0.1.2, < 0.2.0dev',
+    'grpcio >= 1.8.2',
+    'google-auth >= 1.0.2, < 2.0dev',
     'grpc-google-iam-v1 >= 0.11.1, < 0.12dev',
-    'grpcio >= 1.0.2, < 2.0dev',
     'psutil >= 5.2.2, < 6.0dev',
 ]
 
 setup(
     name='google-cloud-pubsub',
-    version='0.28.3',
+    version='0.30.1.dev1',
     description='Python Client for Google Cloud Pub/Sub',
     long_description=README,
     namespace_packages=[
         'google',
         'google.cloud',
-        'google.cloud.gapic',
-        'google.cloud.gapic.pubsub',
-        'google.cloud.proto',
-        'google.cloud.proto.pubsub',
     ],
     packages=find_packages(exclude=('tests*',)),
     install_requires=REQUIREMENTS,

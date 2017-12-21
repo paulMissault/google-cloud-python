@@ -9,7 +9,7 @@ Python Client for Google Cloud Pub / Sub
 
 -  `Documentation`_
 
-.. _Documentation: https://googlecloudplatform.github.io/google-cloud-python/latest/pubsub/usage.html
+.. _Documentation: https://googlecloudplatform.github.io/google-cloud-python/latest/pubsub/
 
 Quick Start
 -----------
@@ -17,6 +17,12 @@ Quick Start
 .. code-block:: console
 
     $ pip install --upgrade google-cloud-pubsub
+
+For more information on setting up your Python development environment,
+such as installing ``pip`` and ``virtualenv`` on your system, please refer
+to `Python Development Environment Setup Guide`_ for Google Cloud Platform.
+
+.. _Python Development Environment Setup Guide: https://cloud.google.com/python/setup
 
 Authentication
 --------------
@@ -27,7 +33,7 @@ learn more. You may also find the `authentication document`_ shared by all
 the ``google-cloud-*`` libraries to be helpful.
 
 .. _Authentication section: https://google-cloud-python.readthedocs.io/en/latest/core/auth.html
-.. _authentication document: https://github.com/GoogleCloudPlatform/gcloud-common/tree/master/authentication
+.. _authentication document: https://github.com/GoogleCloudPlatform/google-cloud-common/tree/master/authentication
 
 Using the API
 -------------
@@ -60,12 +66,12 @@ messages to it
     from google.cloud import pubsub
 
     publisher = pubsub.PublisherClient()
-    topic = 'projects/{project_id}/topics/{topic}'.format(
+    topic_name = 'projects/{project_id}/topics/{topic}'.format(
         project_id=os.getenv('GOOGLE_CLOUD_PROJECT'),
         topic='MY_TOPIC_NAME',  # Set this to something appropriate.
     )
-    publisher.create_topic()
-    publisher.publish(topic, b'My first message!', spam='eggs')
+    publisher.create_topic(topic_name)
+    publisher.publish(topic_name, b'My first message!', spam='eggs')
 
 To learn more, consult the `publishing documentation`_.
 
@@ -84,7 +90,7 @@ the topic, and subscribe to that.
     from google.cloud import pubsub
 
     subscriber = pubsub.SubscriberClient()
-    topic = 'projects/{project_id}/topics/{topic}'.format(
+    topic_name = 'projects/{project_id}/topics/{topic}'.format(
         project_id=os.getenv('GOOGLE_CLOUD_PROJECT'),
         topic='MY_TOPIC_NAME',  # Set this to something appropriate.
     )
@@ -92,7 +98,9 @@ the topic, and subscribe to that.
         project_id=os.getenv('GOOGLE_CLOUD_PROJECT'),
         sub='MY_SUBSCRIPTION_NAME',  # Set this to something appropriate.
     )
-    subscription = subscriber.create_subscription(topic, subscription)
+    subscriber.create_subscription(
+        name=subscription_name, topic=topic_name)
+    subscription = subscriber.subscribe(subscription_name)
 
 The subscription is opened asychronously, and messages are processed by
 use of a callback.

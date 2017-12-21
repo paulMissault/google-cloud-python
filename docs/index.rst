@@ -2,11 +2,16 @@
   :maxdepth: 2
   :hidden:
 
+  releases
   core/index
   bigquery/usage
+  bigquery_datatransfer/index
   bigtable/usage
+  container/index
+  dataproc/index
   datastore/usage
   dns/usage
+  firestore/index
   language/usage
   pubsub/index
   resource-manager/api
@@ -32,6 +37,12 @@ The ``google-cloud`` library is ``pip`` install-able:
 .. code-block:: console
 
     $ pip install google-cloud
+
+For more information on setting up your Python development environment,
+such as installing ``pip`` and ``virtualenv`` on your system, please refer
+to `Python Development Environment Setup Guide`_ for Google Cloud Platform.
+
+.. _Python Development Environment Setup Guide: https://cloud.google.com/python/setup
 
 Cloud Datastore
 ~~~~~~~~~~~~~~~

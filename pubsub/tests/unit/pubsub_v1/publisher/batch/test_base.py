@@ -1,4 +1,4 @@
-# Copyright 2017, Google Inc. All rights reserved.
+# Copyright 2017, Google LLC All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,4 +66,13 @@ def test_will_not_accept_size():
         status=BatchStatus.ACCEPTING_MESSAGES,
     )
     message = types.PubsubMessage(data=b'abcdefghijklmnopqrstuvwxyz')
+    assert batch.will_accept(message) is False
+
+
+def test_will_not_accept_number():
+    batch = create_batch(
+        settings=types.BatchSettings(max_messages=-1),
+        status=BatchStatus.ACCEPTING_MESSAGES,
+    )
+    message = types.PubsubMessage(data=b'abc')
     assert batch.will_accept(message) is False

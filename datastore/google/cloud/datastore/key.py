@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc.
+# Copyright 2014 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import base64
 import copy
 import six
 
-from google.cloud.proto.datastore.v1 import entity_pb2 as _entity_pb2
+from google.cloud.datastore_v1.proto import entity_pb2 as _entity_pb2
 
 from google.cloud._helpers import _to_bytes
 from google.cloud.datastore import _app_engine_key_pb2
@@ -298,7 +298,7 @@ class Key(object):
 
         return key
 
-    def to_legacy_urlsafe(self):
+    def to_legacy_urlsafe(self, location_prefix=None):
         """Convert to a base64 encode urlsafe string for App Engine.
 
         This is intended to work with the "legacy" representation of a
@@ -310,13 +310,26 @@ class Key(object):
         .. note::
 
             The string returned by ``to_legacy_urlsafe`` is equivalent, but
-            not identical, to the string returned by ``ndb``.
+            not identical, to the string returned by ``ndb``. The location
+            prefix may need to be specified to obtain identical urlsafe
+            keys.
+
+        :type location_prefix: str
+        :param location_prefix: The location prefix of an App Engine project
+                                ID. Often this value is 's~', but may also be
+                                'e~', or other location prefixes currently
+                                unknown.
 
         :rtype: bytes
         :returns: A bytestring containing the key encoded as URL-safe base64.
         """
+        if location_prefix is None:
+            project_id = self.project
+        else:
+            project_id = location_prefix + self.project
+
         reference = _app_engine_key_pb2.Reference(
-            app=self.project,
+            app=project_id,
             path=_to_legacy_path(self._path),  # Avoid the copy.
             name_space=self.namespace,
         )

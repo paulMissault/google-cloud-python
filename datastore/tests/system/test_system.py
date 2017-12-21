@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc.
+# Copyright 2014 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import six
 from google.cloud._helpers import UTC
 from google.cloud import datastore
 from google.cloud.datastore.helpers import GeoPoint
+from google.cloud.datastore_v1 import types
 from google.cloud.environment_vars import GCD_DATASET
 from google.cloud.exceptions import Conflict
 

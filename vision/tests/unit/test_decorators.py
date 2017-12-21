@@ -1,4 +1,4 @@
-# Copyright 2017, Google Inc. All rights reserved.
+# Copyright 2017, Google LLC All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ class SingleFeatureMethodTests(unittest.TestCase):
 
         # Prove that other aspects of the AnnotateImageRequest, such as the
         # image context, will be preserved.
-        SENTINEL = object()
+        SENTINEL = mock.sentinel.image_context
 
         # Make a face detection request.
         client = vision.ImageAnnotatorClient(
@@ -73,4 +73,4 @@ class SingleFeatureMethodTests(unittest.TestCase):
             'features': [{'type': vision.enums.Feature.Type.FACE_DETECTION}],
             'image': image,
             'image_context': SENTINEL,
-        }, options=None)
+        }, retry=None, timeout=None)

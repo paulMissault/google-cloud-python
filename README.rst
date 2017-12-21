@@ -15,9 +15,15 @@ Google Cloud Python Client
 .. _API Documentation: https://googlecloudplatform.github.io/google-cloud-python/latest/
 .. _Read The Docs Documentation: https://google-cloud-python.readthedocs.io/en/latest/
 
+.. note::
+
+    These libraries currently do not run on Google App Engine Standard.
+    We are actively working on adding this support.
+
 The following client libraries have **GA** support:
 
 -  `Google Cloud Datastore`_ (`Datastore README`_)
+-  `Google Cloud Natural Language`_ (`Natural Language README`_)
 -  `Google Cloud Storage`_ (`Storage README`_)
 -  `Google Cloud Translation`_ (`Translation README`_)
 -  `Stackdriver Logging`_ (`Logging README`_)
@@ -29,11 +35,18 @@ of critical security issues) or with an extensive deprecation period.
 Issues and requests against GA libraries are addressed with the highest
 priority.
 
+.. note::
+
+    Sub-components of GA libraries explicitly marked as beta in the
+    import path (e.g. ``google.cloud.language_v1beta2``) should be considered
+    to be beta.
+
 The following client libraries have **beta** support:
 
 -  `Google BigQuery`_ (`BigQuery README`_)
--  `Google Cloud Natural Language`_ (`Natural Language README`_)
+-  `Google Cloud Firestore`_ (`Firestore README`_)
 -  `Google Cloud Pub/Sub`_ (`Pub/Sub README`_)
+-  `Google Cloud Spanner`_ (`Spanner README`_)
 -  `Google Cloud Speech`_ (`Speech README`_)
 -  `Google Cloud Video Intelligence`_ (`Video Intelligence README`_)
 -  `Google Cloud Vision`_ (`Vision README`_)
@@ -45,12 +58,13 @@ against beta libraries are addressed with a higher priority.
 This client library has **alpha** support for the following Google
 Cloud Platform services:
 
+-  `Google BigQuery Data Transfer`_ (`BigQuery Data Transfer README`_)
 -  `Google Cloud Bigtable`_ (`Bigtable README`_)
 -  `Google Cloud Bigtable - HappyBase`_ (`HappyBase README`_)
+-  `Google Cloud Container`_ (`Container README`_)
 -  `Google Cloud DNS`_ (`DNS README`_)
 -  `Google Cloud Resource Manager`_ (`Resource Manager README`_)
 -  `Google Cloud Runtime Configuration`_ (`Runtime Config README`_)
--  `Google Cloud Spanner`_ (`Spanner README`_)
 -  `Stackdriver Error Reporting`_ (`Error Reporting README`_)
 -  `Stackdriver Monitoring`_ (`Monitoring README`_)
 
@@ -66,6 +80,10 @@ updates. See `versioning`_ for more details.
 .. _Pub/Sub README: https://github.com/GoogleCloudPlatform/google-cloud-python/tree/master/pubsub
 .. _Google BigQuery: https://pypi.org/project/google-cloud-bigquery/
 .. _BigQuery README: https://github.com/GoogleCloudPlatform/google-cloud-python/tree/master/bigquery
+.. _Google BigQuery Data Transfer: https://pypi.org/project/google-cloud-bigquery-datatransfer/
+.. _BigQuery Data Transfer README: https://github.com/GoogleCloudPlatform/google-cloud-python/tree/master/bigquery_datatransfer
+.. _Google Cloud Container: https://pypi.org/project/google-cloud-container/
+.. _Container README: https://github.com/GoogleCloudPlatform/google-cloud-python/tree/master/container
 .. _Google Cloud Resource Manager: https://pypi.org/project/google-cloud-resource-manager/
 .. _Resource Manager README: https://github.com/GoogleCloudPlatform/google-cloud-python/tree/master/resource_manager
 .. _Stackdriver Logging: https://pypi.org/project/google-cloud-logging/
@@ -95,6 +113,8 @@ updates. See `versioning`_ for more details.
 .. _Google Cloud Video Intelligence: https://pypi.python.org/pypi/google-cloud-videointelligence
 .. _Video Intelligence README: https://github.com/GoogleCloudPlatform/google-cloud-python/tree/master/videointelligence
 .. _versioning: https://github.com/GoogleCloudPlatform/google-cloud-python/blob/master/CONTRIBUTING.rst#versioning
+.. _Google Cloud Firestore: https://pypi.org/project/google-cloud-firestore/
+.. _Firestore README: https://github.com/GoogleCloudPlatform/google-cloud-python/tree/master/firestore
 
 If you need support for other Google APIs, check out the
 `Google APIs Python Client library`_.
@@ -107,6 +127,12 @@ Quick Start
 .. code-block:: console
 
     $ pip install --upgrade google-cloud
+
+For more information on setting up your Python development environment,
+such as installing ``pip`` and ``virtualenv`` on your system, please refer
+to `Python Development Environment Setup Guide`_ for Google Cloud Platform.
+
+.. _Python Development Environment Setup Guide: https://cloud.google.com/python/setup
 
 Example Applications
 --------------------
@@ -127,7 +153,7 @@ You may also find the `authentication document`_ shared by all the
 ``google-cloud-*`` libraries to be helpful.
 
 .. _Authentication section: https://google-cloud-python.readthedocs.io/en/latest/core/auth.html
-.. _authentication document: https://github.com/GoogleCloudPlatform/gcloud-common/tree/master/authentication
+.. _authentication document: https://github.com/GoogleCloudPlatform/google-cloud-common/tree/master/authentication
 
 Contributing
 ------------

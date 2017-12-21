@@ -51,12 +51,13 @@ or pass in ``credentials`` explicitly.
 Documents
 *********
 
-The Google Natural Language API has three supported methods
+The Google Natural Language API has the following supported methods:
 
 - `analyzeEntities`_
 - `analyzeSentiment`_
 - `analyzeEntitySentiment`_
 - `annotateText`_
+- `classifyText`_
 
 and each method uses a :class:`~.language_v1.types.Document` for representing
 text.
@@ -116,6 +117,7 @@ to content stored in `Google Cloud Storage`_.
 .. _analyzeSentiment: https://cloud.google.com/natural-language/docs/reference/rest/v1/documents/analyzeSentiment
 .. _analyzeEntitySentiment: https://cloud.google.com/natural-language/docs/reference/rest/v1/documents/analyzeEntitySentiment
 .. _annotateText: https://cloud.google.com/natural-language/docs/reference/rest/v1/documents/annotateText
+.. _classifyText: https://cloud.google.com/natural-language/docs/reference/rest/v1/documents/classifyText
 .. _Google Cloud Storage: https://cloud.google.com/storage/
 
 ****************
@@ -131,7 +133,7 @@ returns a :class:`~.language_v1.types.AnalyzeEntitiesResponse`.
      >>> document = language.types.Document(
      ...     content='Michelangelo Caravaggio, Italian painter, is '
      ...             'known for "The Calling of Saint Matthew".',
-     ...     type=language.enums.Type.PLAIN_TEXT,
+     ...     type=language.enums.Document.Type.PLAIN_TEXT,
      ... )
      >>> response = client.analyze_entities(
      ...     document=document,
@@ -279,3 +281,9 @@ An API and type reference is provided for the v1.1 beta also:
   The client for the beta API is provided on a provisional basis. The API
   surface is subject to change, and it is possible that this client will be
   deprecated or removed after its features become GA.
+
+For a list of all ``google-cloud-language`` releases:
+
+.. toctree::
+
+  releases

@@ -1,4 +1,4 @@
-# Copyright 2016 Google Inc.
+# Copyright 2016 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import functools
 
-from google.api.core import page_iterator
+from google.api_core import page_iterator
 from google.cloud import _http
 
 from google.cloud.logging import __version__
@@ -93,7 +93,7 @@ class _LoggingAPI(object):
                            passed, the API will return the first page of
                            entries.
 
-        :rtype: :class:`~google.api.core.page_iterator.Iterator`
+        :rtype: :class:`~google.api_core.page_iterator.Iterator`
         :returns: Iterator of :class:`~google.cloud.logging.entries._BaseEntry`
                   accessible to the current API.
         """
@@ -209,7 +209,7 @@ class _SinksAPI(object):
                            passed, the API will return the first page of
                            sinks.
 
-        :rtype: :class:`~google.api.core.page_iterator.Iterator`
+        :rtype: :class:`~google.api_core.page_iterator.Iterator`
         :returns: Iterator of
                   :class:`~google.cloud.logging.sink.Sink`
                   accessible to the current API.
@@ -229,7 +229,8 @@ class _SinksAPI(object):
             page_token=page_token,
             extra_params=extra_params)
 
-    def sink_create(self, project, sink_name, filter_, destination):
+    def sink_create(self, project, sink_name, filter_, destination,
+                    unique_writer_identity=False):
         """API call:  create a sink resource.
 
         See
@@ -248,6 +249,11 @@ class _SinksAPI(object):
         :type destination: str
         :param destination: destination URI for the entries exported by
                             the sink.
+
+        :type unique_writer_identity: bool
+        :param unique_writer_identity: (Optional) determines the kind of
+                                       IAM identity returned as
+                                       writer_identity in the new sink.
         """
         target = '/projects/%s/sinks' % (project,)
         data = {
@@ -255,7 +261,13 @@ class _SinksAPI(object):
             'filter': filter_,
             'destination': destination,
         }
-        self.api_request(method='POST', path=target, data=data)
+        query_params = {'uniqueWriterIdentity': unique_writer_identity}
+        self.api_request(
+            method='POST',
+            path=target,
+            data=data,
+            query_params=query_params,
+        )
 
     def sink_get(self, project, sink_name):
         """API call:  retrieve a sink resource.
@@ -353,7 +365,7 @@ class _MetricsAPI(object):
                            passed, the API will return the first page of
                            metrics.
 
-        :rtype: :class:`~google.api.core.page_iterator.Iterator`
+        :rtype: :class:`~google.api_core.page_iterator.Iterator`
         :returns: Iterator of
                   :class:`~google.cloud.logging.metric.Metric`
                   accessible to the current API.
@@ -471,12 +483,12 @@ def _item_to_entry(iterator, resource, loggers):
 
         This method does not have the correct signature to be used as
         the ``item_to_value`` argument to
-        :class:`~google.api.core.page_iterator.Iterator`. It is intended to be
+        :class:`~google.api_core.page_iterator.Iterator`. It is intended to be
         patched with a mutable ``loggers`` argument that can be updated
         on subsequent calls. For an example, see how the method is
         used above in :meth:`_LoggingAPI.list_entries`.
 
-    :type iterator: :class:`~google.api.core.page_iterator.Iterator`
+    :type iterator: :class:`~google.api_core.page_iterator.Iterator`
     :param iterator: The iterator that is currently in use.
 
     :type resource: dict
@@ -497,7 +509,7 @@ def _item_to_entry(iterator, resource, loggers):
 def _item_to_sink(iterator, resource):
     """Convert a sink resource to the native object.
 
-    :type iterator: :class:`~google.api.core.page_iterator.Iterator`
+    :type iterator: :class:`~google.api_core.page_iterator.Iterator`
     :param iterator: The iterator that is currently in use.
 
     :type resource: dict
@@ -512,7 +524,7 @@ def _item_to_sink(iterator, resource):
 def _item_to_metric(iterator, resource):
     """Convert a metric resource to the native object.
 
-    :type iterator: :class:`~google.api.core.page_iterator.Iterator`
+    :type iterator: :class:`~google.api_core.page_iterator.Iterator`
     :param iterator: The iterator that is currently in use.
 
     :type resource: dict

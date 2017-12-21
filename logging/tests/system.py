@@ -1,4 +1,4 @@
-# Copyright 2016 Google Inc.
+# Copyright 2016 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -414,30 +414,30 @@ class TestLogging(unittest.TestCase):
         self.assertTrue(sink.exists())
 
     def test_create_sink_pubsub_topic(self):
-        from google.cloud.iam import OWNER_ROLE
-        from google.cloud.pubsub import client as pubsub_client
+        from google.cloud import pubsub_v1
 
         SINK_NAME = 'test-create-sink-topic%s' % (_RESOURCE_ID,)
-        TOPIC_NAME = 'logging-test-sink%s' % (_RESOURCE_ID,)
+        TOPIC_NAME = 'logging-systest{}'.format(unique_resource_id('-'))
 
         # Create the destination topic, and set up the IAM policy to allow
         # Stackdriver Logging to write into it.
-        pubsub_client = pubsub_client.Client()
-        topic = pubsub_client.topic(TOPIC_NAME)
-        topic.create()
-        self.to_delete.append(topic)
-        policy = topic.get_iam_policy()
-        new_owners = set([policy.group('cloud-logs@google.com')])
-        new_owners.update(policy.owners)
-        policy[OWNER_ROLE] = new_owners
-        topic.set_iam_policy(policy)
+        publisher = pubsub_v1.PublisherClient()
+        topic_path = publisher.topic_path(Config.CLIENT.project, TOPIC_NAME)
+        self.to_delete.append(_DeleteWrapper(publisher, topic_path))
+        publisher.create_topic(topic_path)
 
-        TOPIC_URI = 'pubsub.googleapis.com/%s' % (topic.full_name,)
+        policy = publisher.get_iam_policy(topic_path)
+        policy.bindings.add(
+            role='roles/owner',
+            members=['group:cloud-logs@google.com']
+        )
+        publisher.set_iam_policy(topic_path, policy)
+
+        TOPIC_URI = 'pubsub.googleapis.com/%s' % (topic_path,)
 
         sink = Config.CLIENT.sink(SINK_NAME, DEFAULT_FILTER, TOPIC_URI)
         self.assertFalse(sink.exists())
         sink.create()
-        self.to_delete.append(sink)
         self.assertTrue(sink.exists())
 
     def _init_bigquery_dataset(self):
@@ -515,3 +515,13 @@ class TestLogging(unittest.TestCase):
         sink.update()
         self.assertEqual(sink.filter_, UPDATED_FILTER)
         self.assertEqual(sink.destination, dataset_uri)
+
+
+class _DeleteWrapper(object):
+
+    def __init__(self, publisher, topic_path):
+        self.publisher = publisher
+        self.topic_path = topic_path
+
+    def delete(self):
+        self.publisher.delete_topic(self.topic_path)

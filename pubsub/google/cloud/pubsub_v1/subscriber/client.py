@@ -1,4 +1,4 @@
-# Copyright 2017, Google Inc. All rights reserved.
+# Copyright 2017, Google LLC All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,15 +15,19 @@
 from __future__ import absolute_import
 
 import pkg_resources
+import os
 
-from google.cloud.gapic.pubsub.v1 import subscriber_client
+import grpc
+
+from google.api_core import grpc_helpers
 
 from google.cloud.pubsub_v1 import _gapic
 from google.cloud.pubsub_v1 import types
+from google.cloud.pubsub_v1.gapic import subscriber_client
 from google.cloud.pubsub_v1.subscriber.policy import thread
 
 
-__VERSION__ = pkg_resources.get_distribution('google-cloud-pubsub').version
+__version__ = pkg_resources.get_distribution('google-cloud-pubsub').version
 
 
 @_gapic.add_methods(subscriber_client.SubscriberClient,
@@ -49,21 +53,51 @@ class Client(object):
             arguments.
     """
     def __init__(self, policy_class=thread.Policy, **kwargs):
+        # Sanity check: Is our goal to use the emulator?
+        # If so, create a grpc insecure channel with the emulator host
+        # as the target.
+        if os.environ.get('PUBSUB_EMULATOR_HOST'):
+            kwargs['channel'] = grpc.insecure_channel(
+                target=os.environ.get('PUBSUB_EMULATOR_HOST'),
+            )
+
+        # Use a custom channel.
+        # We need this in order to set appropriate default message size and
+        # keepalive options.
+        if 'channel' not in kwargs:
+            kwargs['channel'] = grpc_helpers.create_channel(
+                credentials=kwargs.pop('credentials', None),
+                target=self.target,
+                scopes=subscriber_client.SubscriberClient._DEFAULT_SCOPES,
+                options={
+                    'grpc.max_send_message_length': -1,
+                    'grpc.max_receive_message_length': -1,
+                    'grpc.keepalive_time_ms': 30000,
+                }.items(),
+            )
+
         # Add the metrics headers, and instantiate the underlying GAPIC
         # client.
-        kwargs['lib_name'] = 'gccl'
-        kwargs['lib_version'] = __VERSION__
         self.api = subscriber_client.SubscriberClient(**kwargs)
 
         # The subcription class is responsible to retrieving and dispatching
         # messages.
         self._policy_class = policy_class
 
+    @property
+    def target(self):
+        """Return the target (where the API is).
+
+        Returns:
+            str: The location of the API.
+        """
+        return subscriber_client.SubscriberClient.SERVICE_ADDRESS
+
     def subscribe(self, subscription, callback=None, flow_control=()):
         """Return a representation of an individual subscription.
 
         This method creates and returns a ``Consumer`` object (that is, a
-        :class:`~.pubsub_v1.subscriber.consumer.base.BaseConsumer`)
+        :class:`~.pubsub_v1.subscriber._consumer.Consumer`)
         subclass) bound to the topic. It does `not` create the subcription
         on the backend (or do any API call at all); it simply returns an
         object capable of doing these things.
@@ -88,11 +122,17 @@ class Client(object):
                 inundated with too many messages at once.
 
         Returns:
-            ~.pubsub_v1.subscriber.consumer.base.BaseConsumer: An instance
+            ~.pubsub_v1.subscriber._consumer.Consumer: An instance
                 of the defined ``consumer_class`` on the client.
+
+        Raises:
+            TypeError: If ``callback`` is not callable.
         """
         flow_control = types.FlowControl(*flow_control)
         subscr = self._policy_class(self, subscription, flow_control)
         if callable(callback):
             subscr.open(callback)
+        elif callback is not None:
+            error = '{!r} is not callable, please check input'.format(callback)
+            raise TypeError(error)
         return subscr

@@ -1,4 +1,4 @@
-# Copyright 2017, Google Inc. All rights reserved.
+# Copyright 2017, Google LLC All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 from __future__ import absolute_import
 
 import abc
-import enum
 
 import six
 
@@ -49,6 +48,16 @@ class Batch(object):
     def __len__(self):
         """Return the number of messages currently in the batch."""
         return len(self.messages)
+
+    @staticmethod
+    @abc.abstractmethod
+    def make_lock():
+        """Return a lock in the chosen concurrency model.
+
+        Returns:
+            ContextManager: A newly created lock.
+        """
+        raise NotImplementedError
 
     @property
     @abc.abstractmethod
@@ -98,6 +107,11 @@ class Batch(object):
     def will_accept(self, message):
         """Return True if the batch is able to accept the message.
 
+        In concurrent implementations, the attributes on the current batch
+        may be modified by other workers. With this in mind, the caller will
+        likely want to hold a lock that will make sure the state remains
+        the same after the "will accept?" question is answered.
+
         Args:
             message (~.pubsub_v1.types.PubsubMessage): The Pub/Sub message.
 
@@ -108,8 +122,14 @@ class Batch(object):
         if self.status != BatchStatus.ACCEPTING_MESSAGES:
             return False
 
-        # If this batch can not hold the message in question, return False.
+        # If this message will make the batch exceed the ``max_bytes``
+        # setting, return False.
         if self.size + message.ByteSize() > self.settings.max_bytes:
+            return False
+
+        # If this message will make the batch exceed the ``max_messages``
+        # setting, return False.
+        if len(self.messages) >= self.settings.max_messages:
             return False
 
         # Okay, everything is good.
@@ -129,7 +149,7 @@ class Batch(object):
             message (~.pubsub_v1.types.PubsubMessage): The Pub/Sub message.
 
         Returns:
-            ~.pubsub_v1.publisher.batch.mp.Future: An object conforming to the
+            ~google.api_core.future.Future: An object conforming to the
                 :class:`concurrent.futures.Future` interface.
         """
         raise NotImplementedError
@@ -143,5 +163,7 @@ class BatchStatus(object):
     library hooks in functionality.
     """
     ACCEPTING_MESSAGES = 'accepting messages'
+    STARTING = 'starting'
+    IN_PROGRESS = 'in progress'
     ERROR = 'error'
     SUCCESS = 'success'

@@ -1,4 +1,4 @@
-# Copyright 2015 Google Inc.
+# Copyright 2015 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
 """User-friendly container for Google Cloud Bigtable Table."""
 
 
-import six
-
+from google.api_core.exceptions import RetryError
+from google.api_core.retry import if_exception_type
+from google.api_core.retry import Retry
 from google.cloud._helpers import _to_bytes
 from google.cloud.bigtable._generated import (
     bigtable_pb2 as data_messages_v2_pb2)
@@ -30,11 +31,30 @@ from google.cloud.bigtable.row import AppendRow
 from google.cloud.bigtable.row import ConditionalRow
 from google.cloud.bigtable.row import DirectRow
 from google.cloud.bigtable.row_data import PartialRowsData
+from grpc import StatusCode
 
 
 # Maximum number of mutations in bulk (MutateRowsRequest message):
-# https://cloud.google.com/bigtable/docs/reference/data/rpc/google.bigtable.v2#google.bigtable.v2.MutateRowRequest
+# (https://cloud.google.com/bigtable/docs/reference/data/rpc/
+#  google.bigtable.v2#google.bigtable.v2.MutateRowRequest)
 _MAX_BULK_MUTATIONS = 100000
+
+
+class _BigtableRetryableError(Exception):
+    """Retry-able error expected by the default retry strategy."""
+
+
+DEFAULT_RETRY = Retry(
+    predicate=if_exception_type(_BigtableRetryableError),
+    initial=1.0,
+    maximum=15.0,
+    multiplier=2.0,
+    deadline=120.0,  # 2 minutes
+)
+"""The default retry stategy to be used on retry-able errors.
+
+Used by :meth:`~google.cloud.bigtable.table.Table.mutate_rows`.
+"""
 
 
 class TableMismatchError(ValueError):
@@ -58,7 +78,6 @@ class Table(object):
     We can use a :class:`Table` to:
 
     * :meth:`create` the table
-    * :meth:`rename` the table
     * :meth:`delete` the table
     * :meth:`list_column_families` in the table
 
@@ -113,7 +132,7 @@ class Table(object):
         .. warning::
 
            At most one of ``filter_`` and ``append`` can be used in a
-           :class:`Row`.
+           :class:`~google.cloud.bigtable.row.Row`.
 
         :type row_key: bytes
         :param row_key: The key for the row being created.
@@ -126,7 +145,7 @@ class Table(object):
         :param append: (Optional) Flag to determine if the row should be used
                        for append mutations.
 
-        :rtype: :class:`.Row`
+        :rtype: :class:`~google.cloud.bigtable.row.Row`
         :returns: A row owned by this table.
         :raises: :class:`ValueError <exceptions.ValueError>` if both
                  ``filter_`` and ``append`` are used.
@@ -296,7 +315,7 @@ class Table(object):
         # We expect an iterator of `data_messages_v2_pb2.ReadRowsResponse`
         return PartialRowsData(response_iterator)
 
-    def mutate_rows(self, rows):
+    def mutate_rows(self, rows, retry=DEFAULT_RETRY):
         """Mutates multiple rows in bulk.
 
         The method tries to update all specified rows.
@@ -304,26 +323,30 @@ class Table(object):
         They can be applied to the row separately.
         If row mutations finished successfully, they would be cleaned up.
 
+        Optionally, a ``retry`` strategy can be specified to re-attempt
+        mutations on rows that return transient errors. This method will retry
+        until all rows succeed or until the request deadline is reached. To
+        specify a ``retry`` strategy of "do-nothing", a deadline of ``0.0``
+        can be specified.
+
         :type rows: list
         :param rows: List or other iterable of :class:`.DirectRow` instances.
+
+        :type retry: :class:`~google.api_core.retry.Retry`
+        :param retry:
+            (Optional) Retry delay and deadline arguments. To override, the
+            default value :attr:`DEFAULT_RETRY` can be used and modified with
+            the :meth:`~google.api_core.retry.Retry.with_delay` method or the
+            :meth:`~google.api_core.retry.Retry.with_deadline` method.
 
         :rtype: list
         :returns: A list of response statuses (`google.rpc.status_pb2.Status`)
                   corresponding to success or failure of each row mutation
                   sent. These will be in the same order as the `rows`.
         """
-        mutate_rows_request = _mutate_rows_request(self.name, rows)
-        client = self._instance._client
-        responses = client._data_stub.MutateRows(mutate_rows_request)
-
-        responses_statuses = [
-            None for _ in six.moves.xrange(len(mutate_rows_request.entries))]
-        for response in responses:
-            for entry in response.entries:
-                responses_statuses[entry.index] = entry.status
-                if entry.status.code == 0:
-                    rows[entry.index].clear()
-        return responses_statuses
+        retryable_mutate_rows = _RetryableMutateRowsWorker(
+            self._instance._client, self.name, rows)
+        return retryable_mutate_rows(retry=retry)
 
     def sample_row_keys(self):
         """Read a sample of row keys in the table.
@@ -361,6 +384,114 @@ class Table(object):
         client = self._instance._client
         response_iterator = client._data_stub.SampleRowKeys(request_pb)
         return response_iterator
+
+
+class _RetryableMutateRowsWorker(object):
+    """A callable worker that can retry to mutate rows with transient errors.
+
+    This class is a callable that can retry mutating rows that result in
+    transient errors. After all rows are successful or none of the rows
+    are retryable, any subsequent call on this callable will be a no-op.
+    """
+
+    # pylint: disable=unsubscriptable-object
+    RETRY_CODES = (
+        StatusCode.DEADLINE_EXCEEDED.value[0],
+        StatusCode.ABORTED.value[0],
+        StatusCode.UNAVAILABLE.value[0],
+    )
+    # pylint: enable=unsubscriptable-object
+
+    def __init__(self, client, table_name, rows):
+        self.client = client
+        self.table_name = table_name
+        self.rows = rows
+        self.responses_statuses = [None] * len(self.rows)
+
+    def __call__(self, retry=DEFAULT_RETRY):
+        """Attempt to mutate all rows and retry rows with transient errors.
+
+        Will retry the rows with transient errors until all rows succeed or
+        ``deadline`` specified in the `retry` is reached.
+
+        :rtype: list
+        :returns: A list of response statuses (`google.rpc.status_pb2.Status`)
+                  corresponding to success or failure of each row mutation
+                  sent. These will be in the same order as the ``rows``.
+        """
+        mutate_rows = self._do_mutate_retryable_rows
+        if retry:
+            mutate_rows = retry(self._do_mutate_retryable_rows)
+
+        try:
+            mutate_rows()
+        except (_BigtableRetryableError, RetryError) as err:
+            # - _BigtableRetryableError raised when no retry strategy is used
+            #   and a retryable error on a mutation occurred.
+            # - RetryError raised when retry deadline is reached.
+            # In both cases, just return current `responses_statuses`.
+            pass
+
+        return self.responses_statuses
+
+    @staticmethod
+    def _is_retryable(status):
+        return (status is None or
+                status.code in _RetryableMutateRowsWorker.RETRY_CODES)
+
+    def _do_mutate_retryable_rows(self):
+        """Mutate all the rows that are eligible for retry.
+
+        A row is eligible for retry if it has not been tried or if it resulted
+        in a transient error in a previous call.
+
+        :rtype: list
+        :return: The responses statuses, which is a list of
+                 :class:`~google.rpc.status_pb2.Status`.
+        :raises: One of the following:
+
+                 * :exc:`~.table._BigtableRetryableError` if any
+                   row returned a transient error.
+                 * :exc:`RuntimeError` if the number of responses doesn't
+                   match the number of rows that were retried
+        """
+        retryable_rows = []
+        index_into_all_rows = []
+        for index, status in enumerate(self.responses_statuses):
+            if self._is_retryable(status):
+                retryable_rows.append(self.rows[index])
+                index_into_all_rows.append(index)
+
+        if not retryable_rows:
+            # All mutations are either successful or non-retryable now.
+            return self.responses_statuses
+
+        mutate_rows_request = _mutate_rows_request(
+            self.table_name, retryable_rows)
+        responses = self.client._data_stub.MutateRows(
+            mutate_rows_request)
+
+        num_responses = 0
+        num_retryable_responses = 0
+        for response in responses:
+            for entry in response.entries:
+                num_responses += 1
+                index = index_into_all_rows[entry.index]
+                self.responses_statuses[index] = entry.status
+                if self._is_retryable(entry.status):
+                    num_retryable_responses += 1
+                if entry.status.code == 0:
+                    self.rows[index].clear()
+
+        if len(retryable_rows) != num_responses:
+            raise RuntimeError(
+                'Unexpected number of responses', num_responses,
+                'Expected', len(retryable_rows))
+
+        if num_retryable_responses:
+            raise _BigtableRetryableError
+
+        return self.responses_statuses
 
 
 def _create_row_request(table_name, row_key=None, start_key=None, end_key=None,
@@ -469,8 +600,9 @@ def _check_row_table_name(table_name, row):
     :type table_name: str
     :param table_name: The name of the table.
 
-    :type row: :class:`.Row`
-    :param row: An instance of :class:`.Row` subclasses.
+    :type row: :class:`~google.cloud.bigtable.row.Row`
+    :param row: An instance of :class:`~google.cloud.bigtable.row.Row`
+                subclasses.
 
     :raises: :exc:`~.table.TableMismatchError` if the row does not belong to
              the table.
@@ -484,8 +616,9 @@ def _check_row_table_name(table_name, row):
 def _check_row_type(row):
     """Checks that a row is an instance of :class:`.DirectRow`.
 
-    :type row: :class:`.Row`
-    :param row: An instance of :class:`.Row` subclasses.
+    :type row: :class:`~google.cloud.bigtable.row.Row`
+    :param row: An instance of :class:`~google.cloud.bigtable.row.Row`
+                subclasses.
 
     :raises: :class:`TypeError <exceptions.TypeError>` if the row is not an
              instance of DirectRow.

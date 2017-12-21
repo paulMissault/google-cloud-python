@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc.
+# Copyright 2014 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,11 +22,17 @@ class TestTransaction(unittest.TestCase):
     @staticmethod
     def _get_target_class():
         from google.cloud.datastore.transaction import Transaction
-
         return Transaction
+
+    def _get_options_class(self, **kw):
+        from google.cloud.datastore_v1.types import TransactionOptions
+        return TransactionOptions
 
     def _make_one(self, client, **kw):
         return self._get_target_class()(client, **kw)
+
+    def _make_options(self, **kw):
+        return self._get_options_class()(**kw)
 
     def test_ctor_defaults(self):
         project = 'PROJECT'
@@ -40,7 +46,7 @@ class TestTransaction(unittest.TestCase):
         self.assertEqual(len(xact._partial_key_entities), 0)
 
     def test_current(self):
-        from google.cloud.proto.datastore.v1 import datastore_pb2
+        from google.cloud.datastore_v1.proto import datastore_pb2
 
         project = 'PROJECT'
         id_ = 678
@@ -130,7 +136,7 @@ class TestTransaction(unittest.TestCase):
         ds_api.begin_transaction.assert_called_once_with(project)
 
     def test_commit_no_partial_keys(self):
-        from google.cloud.proto.datastore.v1 import datastore_pb2
+        from google.cloud.datastore_v1.proto import datastore_pb2
 
         project = 'PROJECT'
         id_ = 1002930
@@ -147,7 +153,7 @@ class TestTransaction(unittest.TestCase):
         ds_api.begin_transaction.assert_called_once_with(project)
 
     def test_commit_w_partial_keys(self):
-        from google.cloud.proto.datastore.v1 import datastore_pb2
+        from google.cloud.datastore_v1.proto import datastore_pb2
 
         project = 'PROJECT'
         kind = 'KIND'
@@ -170,7 +176,7 @@ class TestTransaction(unittest.TestCase):
         ds_api.begin_transaction.assert_called_once_with(project)
 
     def test_context_manager_no_raise(self):
-        from google.cloud.proto.datastore.v1 import datastore_pb2
+        from google.cloud.datastore_v1.proto import datastore_pb2
 
         project = 'PROJECT'
         id_ = 912830
@@ -212,9 +218,30 @@ class TestTransaction(unittest.TestCase):
         self.assertIsNone(xact.id)
         self.assertEqual(ds_api.begin_transaction.call_count, 1)
 
+    def test_constructor_read_only(self):
+        project = 'PROJECT'
+        id_ = 850302
+        ds_api = _make_datastore_api(xact=id_)
+        client = _Client(project, datastore_api=ds_api)
+        read_only = self._get_options_class().ReadOnly()
+        options = self._make_options(read_only=read_only)
+        xact = self._make_one(client, read_only=True)
+        self.assertEqual(xact._options, options)
+
+    def test_put_read_only(self):
+        project = 'PROJECT'
+        id_ = 943243
+        ds_api = _make_datastore_api(xact_id=id_)
+        client = _Client(project, datastore_api=ds_api)
+        entity = _Entity()
+        xact = self._make_one(client, read_only=True)
+        xact.begin()
+        with self.assertRaises(RuntimeError):
+            xact.put(entity)
+
 
 def _make_key(kind, id_, project):
-    from google.cloud.proto.datastore.v1 import entity_pb2
+    from google.cloud.datastore_v1.proto import entity_pb2
 
     key = entity_pb2.Key()
     key.partition_id.project_id = project
@@ -271,7 +298,7 @@ class _NoCommitBatch(object):
 
 
 def _make_commit_response(*keys):
-    from google.cloud.proto.datastore.v1 import datastore_pb2
+    from google.cloud.datastore_v1.proto import datastore_pb2
 
     mutation_results = [
         datastore_pb2.MutationResult(key=key) for key in keys]

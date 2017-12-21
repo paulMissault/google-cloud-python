@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc.
+# Copyright 2014 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -191,6 +191,19 @@ class TestEntity(unittest.TestCase):
         entity2._meanings[name] = (meaning, value)
 
         self.assertFalse(entity1 == entity2)
+
+    def test_id(self):
+        from google.cloud.datastore.key import Key
+
+        key = Key(_KIND, _ID, project=_PROJECT)
+        entity = self._make_one(key=key)
+        self.assertEqual(entity.id,  _ID)
+
+    def test_id_none(self):
+        from google.cloud.datastore.key import Key
+
+        entity = self._make_one(key=None)
+        self.assertEqual(entity.id,  None)
 
     def test___repr___no_key_empty(self):
         entity = self._make_one()

@@ -1,3 +1,17 @@
+# Copyright 2017 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """A setup module for the GAPIC Stackdriver Trace API library.
 
 See:
@@ -8,14 +22,14 @@ https://github.com/pypa/sampleproject
 from setuptools import setup, find_packages
 
 install_requires = [
-    'google-gax>=0.15.7, <0.16dev',
-    'googleapis-common-protos[grpc]>=1.5.2, <2.0dev',
-    'google-cloud-core >= 0.27.0, < 0.28dev',
+    'google-cloud-core[grpc] >= 0.28.0, < 0.29dev',
+    'google-api-core >= 0.1.1, < 0.2.0dev',
+    'google-gax >= 0.15.7, < 0.16dev',
 ]
 
 setup(
     name='google-cloud-trace',
-    version='0.15.5',
+    version='0.17.1.dev1',
     author='Google Inc',
     author_email='googleapis-packages@google.com',
     classifiers=[
@@ -40,10 +54,5 @@ setup(
     namespace_packages=[
         'google',
         'google.cloud',
-        'google.cloud.gapic',
-        'google.cloud.gapic.trace',
-        'google.cloud.proto',
-        'google.cloud.proto.devtools',
-        'google.cloud.proto.devtools.cloudtrace',
     ],
     url='https://github.com/googleapis/googleapis')
